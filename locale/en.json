@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "My Cozy DSH",
+    "description": "Transform your DSH workspace into a cozy illustrated room with warm colors, an adjustable desk lamp, leafy plants, and playful pets."
+  },
+  "home": {
+    "morning": "Good morning! 🌿",
+    "afternoon": "Good afternoon! 🌿",
+    "evening": "Good evening! 🌿",
+    "welcome": "Let's start a new conversation.",
+    "detail": "Take a moment to gather your thoughts and explore new ideas."
+  }
+}

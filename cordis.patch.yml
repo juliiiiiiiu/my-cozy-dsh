@@ -1,0 +1,3 @@
+- insert:
+    - id: desk-scene-ui
+      name: '@local/desk-scene-ui'
