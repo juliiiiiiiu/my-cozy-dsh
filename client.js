@@ -1238,6 +1238,26 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
       apply(ctx) {
         const dispose = mountScene(CSS, IMG, HOME_LOCALE);
         if (dispose) ctx.effect(() => dispose);
+        ctx.effect(() => {
+          const style = document.createElement('style');
+          style.textContent = `
+            body:not([data-ds-dark-theme]) {
+              --dsk-btn-secondary-border: 1px solid var(--dsk-border-frame, #475e29);
+              --dsk-btn-primary-border: 1px solid var(--dsk-border-frame, #475e29);
+            }
+            body:not([data-ds-dark-theme]) [data-dsh-sidebar] button[class*="_newSession"] {
+              background: #f7f0d8 !important;
+              border: 1px solid var(--dsk-border-frame, #475e29) !important;
+              color: #475e29 !important;
+            }
+            body:not([data-ds-dark-theme]) [data-dsh-sidebar] button[class*="_newSession"]:hover {
+              background: #eee5c8 !important;
+              border-color: var(--dsk-border-frame, #475e29) !important;
+            }
+          `;
+          document.head.appendChild(style);
+          return () => style.remove();
+        });
       },
     };
   },
