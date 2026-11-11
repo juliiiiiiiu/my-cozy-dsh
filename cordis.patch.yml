@@ -1,3 +1,3 @@
 - insert:
-    - id: desk-scene-ui
-      name: '@local/desk-scene-ui'
+    - id: my-cozy-dsh
+      name: 'my-cozy-dsh'
