@@ -6,7 +6,7 @@ Transform your DSH workspace into a cozy, illustrated room with warm colors, a g
 
 ## Installation
 
-Install the repository as a bundle using DeepSeek Harness's plugin manager. The package name is `@local/desk-scene-ui`; the bundle patch enables the matching client plugin. Restart the app after installation if needed.
+Install the repository as a bundle using DeepSeek Harness's plugin manager, or install the public package `my-cozy-dsh`. The bundle patch enables the matching client plugin. Restart the app after installation if needed.
 
 ## Contents
 

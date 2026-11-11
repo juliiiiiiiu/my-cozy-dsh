@@ -1,10 +1,13 @@
 {
-  "name": "@local/desk-scene-ui",
+  "name": "my-cozy-dsh",
   "version": "1.0.2",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "description": "Desk Scene skin for the DeepSeek Harness desktop window: client-side CSS and decorations.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juliiiiiiiu/my-cozy-dsh"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -17,7 +20,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
