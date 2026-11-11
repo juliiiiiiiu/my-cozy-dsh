@@ -1,6 +1,7 @@
 {
   "name": "@local/desk-scene-ui",
   "version": "1.0.2",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Desk Scene skin for the DeepSeek Harness desktop window: client-side CSS and decorations.",
