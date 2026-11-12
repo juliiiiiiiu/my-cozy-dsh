@@ -9,5 +9,9 @@
     "evening": "Good evening! 🌿",
     "welcome": "Let's start a new conversation.",
     "detail": "Take a moment to gather your thoughts and explore new ideas."
+  },
+  "vine": {
+    "hide": "Hide hanging plant",
+    "show": "Show hanging plant"
   }
 }
