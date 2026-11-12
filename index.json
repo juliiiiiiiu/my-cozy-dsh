@@ -12,6 +12,15 @@
       "repository": { "url": "https://github.com/juliiiiiiiu/my-cozy-dsh" },
       "versions": [
         {
+          "version": "1.0.5",
+          "publishTimestamp": 1794483643,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/juliiiiiiiu/my-cozy-dsh.git",
+            "commit": "3d244d094c6b7c942e985036ee75c0a01f9d42c8"
+          }
+        },
+        {
           "version": "1.0.4",
           "publishTimestamp": 1794480001,
           "source": {

@@ -1,9 +1,12 @@
 {
   "name": "my-cozy-dsh",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "type": "module",
   "description": "Desk Scene skin for the DeepSeek Harness desktop window: client-side CSS and decorations.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/juliiiiiiiu/my-cozy-dsh.git"
@@ -24,10 +27,15 @@
     "LICENSE"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true
     }
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
   }
 }
