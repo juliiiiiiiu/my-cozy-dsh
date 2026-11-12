@@ -4,7 +4,7 @@
   "description": "A cozy illustrated theme for DeepSeek Harness.",
   "plugins": [
     {
-      "name": "@local/desk-scene-ui",
+      "name": "my-cozy-dsh",
       "title": "My Cozy DSH",
       "description": "Transform your DSH workspace into a cozy, illustrated room with warm colors, a glowing desk lamp, leafy plants, and playful pets. Adjust the lighting, start a new session with a sleeping Westie, and keep a friendly orange cat by your side while you work.",
       "icon": "./icon.svg",
