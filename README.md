@@ -2,7 +2,9 @@
 
 Transform your DSH workspace into a cozy, illustrated room with warm colors, a glowing desk lamp, leafy plants, and playful pets. Adjust the lighting, start a new session with a sleeping Westie, and keep a friendly orange cat by your side while you work.
 
-![My Cozy DSH theme preview](cover.png)
+![My Cozy DSH theme preview](cover.webp)
+
+![My Cozy DSH theme preview, static](cover.png)
 
 ## Installation
 
