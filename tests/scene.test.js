@@ -31,9 +31,9 @@ function loadClient(dom) {
   return () => cleanup();
 }
 
-test('version is 1.0.5 and vine copy matches the locale files', () => {
+test('version is 1.0.6 and vine copy matches the locale files', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.version, '1.0.5');
+  assert.equal(pkg.version, '1.0.6');
   const en = JSON.parse(read('locale/en.json'));
   const zh = JSON.parse(read('locale/zh.json'));
   const src = read('client.js');
@@ -43,6 +43,8 @@ test('version is 1.0.5 and vine copy matches the locale files', () => {
   assert.match(src, /dsh-cozy-hanging-plant/);
   assert.match(src, /dsh-desk-light-v2/);
   assert.doesNotMatch(src, /dsh-desk-light-v3/);
+  assert.match(src, /ellipse var\(--dsh-pool-rx, 48%\) var\(--dsh-pool-ry, 24%\) at 50% 75%/);
+  assert.match(src, /data-pool=\\"desk\\"/);
 });
 
 test('sidebar plant, sticky bars, and hanging plant follow the scene', async () => {

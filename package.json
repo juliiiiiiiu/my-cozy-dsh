@@ -1,11 +1,12 @@
 {
   "name": "my-cozy-dsh",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "MIT",
   "type": "module",
   "description": "Desk Scene skin for the DeepSeek Harness desktop window: client-side CSS and decorations.",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:lamp": "node --test tests/lamp-pool.harness.js"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
     }
   },
   "devDependencies": {
-    "jsdom": "^25.0.1"
+    "jsdom": "^25.0.1",
+    "playwright": "^1.57.0"
   }
 }
