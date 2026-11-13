@@ -43,7 +43,7 @@ test('version is 1.0.6 and vine copy matches the locale files', () => {
   assert.match(src, /dsh-cozy-hanging-plant/);
   assert.match(src, /dsh-desk-light-v2/);
   assert.doesNotMatch(src, /dsh-desk-light-v3/);
-  assert.match(src, /ellipse var\(--dsh-pool-rx, 48%\) var\(--dsh-pool-ry, 24%\) at 50% 75%/);
+  assert.match(src, /dsh-lamp-flow/);
   assert.match(src, /data-pool=\\"desk\\"/);
 });
 

@@ -14,6 +14,10 @@ function read(rel) {
 
 function rectFor(el, window) {
   if (el.classList && el.classList.contains('dsh-deco-stage')) return new window.DOMRect(0, 0, 1200, 800);
+  if (el.classList && el.classList.contains('dsh-deco-lamp') &&
+      !el.classList.contains('dsh-lamp-beam') && !el.classList.contains('dsh-lamp-cutout')) {
+    return new window.DOMRect(640, 8, 220, 152);
+  }
   const raw = el.getAttribute && el.getAttribute('data-rect');
   if (raw) {
     const [x, y, w, h] = raw.split(',').map(Number);
@@ -72,7 +76,20 @@ function chatHtml() {
     </div>`;
 }
 
-test('desk pool centers on the lower half of the assistant column', () => {
+function boxOf(el) {
+  return {
+    left: parseFloat(el.style.left),
+    top: parseFloat(el.style.top),
+    right: parseFloat(el.style.left) + parseFloat(el.style.width),
+    bottom: parseFloat(el.style.top) + parseFloat(el.style.height),
+  };
+}
+
+function contains(box, x, y) {
+  return box.left <= x + 1 && x <= box.right + 1 && box.top <= y + 1 && y <= box.bottom + 1;
+}
+
+test('the shade beam continues softly to the lower half of the assistant column', () => {
   const dom = scene();
   const { window } = dom;
   window.document.body.innerHTML = chatHtml();
@@ -80,33 +97,35 @@ test('desk pool centers on the lower half of the assistant column', () => {
   try {
     cleanup = loadClient(dom);
     const beam = window.document.querySelector('.dsh-lamp-beam');
+    const flow = window.document.querySelector('.dsh-lamp-flow');
     const stage = window.document.querySelector('.dsh-deco-stage');
-    assert.equal(beam.getAttribute('data-pool'), 'desk');
+    assert.equal(flow.getAttribute('data-pool'), 'desk');
+    assert.equal(flow.getAttribute('data-mode'), 'warm');
+    assert.equal(beam.getAttribute('data-pool'), null);
     assert.equal(beam.getAttribute('data-mode'), 'warm');
-    assert.equal(beam.style.transformOrigin, '50% 75%');
+    assert.equal(parseFloat(beam.style.width), 502);
     assert.equal(window.getComputedStyle(stage).pointerEvents, 'none');
+    assert.equal(window.getComputedStyle(flow).pointerEvents, 'none');
     assert.equal(window.getComputedStyle(beam).pointerEvents, 'none');
     const stageZ = window.getComputedStyle(stage).zIndex;
     assert.match(stageZ, /^(20|var\(--dsk-z-stage,\s*20\))$/);
-    // Column 360,64 720x600 clipped to the scrollport above the composer (top 680).
-    assert.equal(parseFloat(beam.style.left), 360);
-    assert.equal(parseFloat(beam.style.top), 64);
-    assert.equal(parseFloat(beam.style.width), 720);
-    assert.equal(parseFloat(beam.style.height), 600);
-    const theme = window.document.getElementById('dsh-desk-scene').textContent;
-    assert.match(theme, /radial-gradient\(ellipse var\(--dsh-pool-rx, 48%\)/);
-    assert.equal(beam.style.getPropertyValue('--dsh-pool-rx'), '62.40%');
-    assert.equal(beam.style.getPropertyValue('--dsh-pool-ry'), '31.20%');
-    assert.equal(window.getComputedStyle(beam).transform, 'none');
+    const lampScale = 220 / 502;
+    const shade = { x: 640 + 365 * lampScale, y: 8 + 51 * lampScale };
+    const land = { x: 360 + 360, y: 64 + 600 * 0.75 };
+    let box = boxOf(flow);
+    assert.equal(contains(box, shade.x, shade.y), true, JSON.stringify({ box, shade }));
+    assert.equal(contains(box, land.x, land.y), true, JSON.stringify({ box, land }));
+    assert.match(flow.innerHTML, /feGaussianBlur/);
+    assert.match(flow.innerHTML, /stop-opacity="0.28"/);
 
     const column = window.document.querySelector('[data-chat-flow]');
     column.setAttribute('data-rect', '420,80,480,520');
     window.dispatchEvent(new window.Event('resize'));
-    assert.equal(parseFloat(beam.style.left), 420);
-    assert.equal(parseFloat(beam.style.top), 80);
-    assert.equal(parseFloat(beam.style.width), 480);
-    assert.equal(parseFloat(beam.style.height), 520);
-    assert.equal(beam.getAttribute('data-pool'), 'desk');
+    const moved = { x: 420 + 240, y: 80 + 520 * 0.75 };
+    box = boxOf(flow);
+    assert.equal(contains(box, moved.x, moved.y), true, JSON.stringify({ box, moved }));
+    assert.equal(flow.getAttribute('data-pool'), 'desk');
+    assert.equal(parseFloat(beam.style.width), 502);
   } finally {
     if (cleanup) cleanup();
     window.close();
@@ -121,23 +140,24 @@ test('plugins, hero, and a missing reply fall back to the shade beam', () => {
   try {
     cleanup = loadClient(dom);
     const beam = window.document.querySelector('.dsh-lamp-beam');
+    const flow = window.document.querySelector('.dsh-lamp-flow');
     const main = window.document.querySelector('[data-dsh-main]');
     const content = window.document.querySelector('[data-conversation-content]');
 
     main.setAttribute('data-global-panel', '');
     window.dispatchEvent(new window.Event('resize'));
-    assert.equal(beam.getAttribute('data-pool'), null);
-    assert.equal(beam.style.width, '502px');
+    assert.equal(flow.getAttribute('data-pool'), null);
+    assert.equal(parseFloat(beam.style.width), 502);
 
     main.removeAttribute('data-global-panel');
     content.setAttribute('data-content-phase', 'hero');
     window.dispatchEvent(new window.Event('resize'));
-    assert.equal(beam.getAttribute('data-pool'), null);
+    assert.equal(flow.getAttribute('data-pool'), null);
 
     content.setAttribute('data-content-phase', 'active');
     window.document.querySelector('[data-chat-group-part="response"]').setAttribute('data-chat-group-part', 'reasoning');
     window.dispatchEvent(new window.Event('resize'));
-    assert.equal(beam.getAttribute('data-pool'), null, 'reasoning alone is not the reply surface');
+    assert.equal(flow.getAttribute('data-pool'), null, 'reasoning alone is not the reply surface');
 
     window.document.querySelector('[data-chat-flow-kind="assistant-step"]').setAttribute('data-chat-group-part', 'response');
     const dialog = window.document.createElement('div');
@@ -146,10 +166,10 @@ test('plugins, hero, and a missing reply fall back to the shade beam', () => {
     window.document.body.appendChild(dialog);
     window.dispatchEvent(new window.Event('resize'));
     assert.equal(window.document.body.getAttribute('data-dsh-modal'), '1');
-    assert.equal(beam.getAttribute('data-pool'), null);
+    assert.equal(flow.getAttribute('data-pool'), null);
     dialog.remove();
     window.dispatchEvent(new window.Event('resize'));
-    assert.equal(beam.getAttribute('data-pool'), 'desk');
+    assert.equal(flow.getAttribute('data-pool'), 'desk');
     assert.equal(window.localStorage.getItem('dsh-cozy-hanging-plant'), null);
     assert.equal(window.localStorage.getItem('dsh-desk-light-v3'), null);
     const saved = window.localStorage.getItem('dsh-desk-light-v2');
