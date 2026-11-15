@@ -1,6 +1,6 @@
 {
   "name": "my-cozy-dsh",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "license": "MIT",
   "type": "module",
   "description": "Desk Scene skin for the DeepSeek Harness desktop window: client-side CSS and decorations.",
@@ -26,6 +26,7 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "dsh": {

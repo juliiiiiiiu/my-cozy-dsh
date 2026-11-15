@@ -27,13 +27,13 @@ function loadClient(dom) {
   vm.runInContext(read('client.js'), dom.getInternalVMContext());
   assert.ok(plugin, 'client bundle registered');
   let cleanup;
-  plugin.factory().apply({ effect(fn) { cleanup = fn; } });
+  plugin.factory().apply({ effect(fn) { cleanup = fn(); } });
   return () => cleanup();
 }
 
-test('version is 1.0.6 and vine copy matches the locale files', () => {
+test('version is 1.0.7 and vine copy matches the locale files', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.version, '1.0.6');
+  assert.equal(pkg.version, '1.0.7');
   const en = JSON.parse(read('locale/en.json'));
   const zh = JSON.parse(read('locale/zh.json'));
   const src = read('client.js');
@@ -47,16 +47,19 @@ test('version is 1.0.6 and vine copy matches the locale files', () => {
   assert.match(src, /data-pool=\\"desk\\"/);
 });
 
-test('chat width default is inherited and does not override native inline resizing', () => {
-  // Source regression check, not a browser layout or pointer-gesture test.
-  const match = read('client.js').match(/const CSS = ("(?:\\.|[^"\\])*");/);
+test('chat width and first-drag baseline stay owned by native controls', () => {
+  // Source regression check; real pointer drags are verified in the running app.
+  const source = read('client.js');
+  const match = source.match(/const CSS = ("(?:\\.|[^"\\])*");/);
   assert.ok(match, 'client contains a literal theme stylesheet');
   const css = JSON.parse(match[1]);
-  const parentRule = css.match(/div:has\(> \[data-dsh-chat-body\]\)\s*\{([^}]+)\}/);
-  assert.ok(parentRule, 'default belongs to the same parent as the host inline value');
-  assert.match(parentRule[1], /--dsh-chat-user-width:\s*min\(748px, calc\(var\(--dsh-conversation-column-width, 820px\) - 96px\)\);/);
-  assert.doesNotMatch(parentRule[1], /!important/);
-  assert.doesNotMatch(css, /\[data-dsh-chat-body\]\s*\{[^}]*--dsh-chat-user-width/);
+  assert.doesNotMatch(css, /--dsh-chat-(?:user|content)-width\s*:/,
+    'do not shadow native inherited widths or supply a different first-drag baseline');
+  assert.doesNotMatch(source, /localStorage\.setItem\(['"]dsh\.conversation\.contentWidth/);
+  assert.match(source, /var showLeft = leftRoom >= 90/);
+  assert.match(source, /var showRight = rightRoom >= 80/);
+  assert.ok(source.includes("add(doc.querySelector('[data-composer-card]'))"));
+  assert.ok(source.includes('ro.observe(next[j])'));
 });
 
 test('sidebar plant, sticky bars, and hanging plant follow the scene', async () => {

@@ -47,7 +47,7 @@ function loadClient(dom) {
   dom.window.__ModuleLoader__ = { load(def) { plugin = def; } };
   vm.runInContext(read('client.js'), dom.getInternalVMContext());
   let cleanup;
-  plugin.factory().apply({ effect(fn) { cleanup = fn; } });
+  plugin.factory().apply({ effect(fn) { cleanup = fn(); } });
   return () => cleanup();
 }
 
@@ -180,6 +180,42 @@ test('plugins, hero, and a missing reply fall back to the shade beam', () => {
     assert.equal(window.localStorage.getItem('dsh-desk-light-v3'), null);
     const saved = window.localStorage.getItem('dsh-desk-light-v2');
     assert.equal(saved === null || saved.includes('"mode":"warm"'), true);
+  } finally {
+    if (cleanup) cleanup();
+    window.close();
+  }
+});
+
+test('transparency affects both light surfaces, supports every mode, and survives remount', () => {
+  const dom = scene();
+  const { window } = dom;
+  const doc = window.document;
+  doc.body.innerHTML = chatHtml();
+  let cleanup;
+  try {
+    cleanup = loadClient(dom);
+    for (const mode of ['warm', 'white', 'rainbow']) {
+      const button = doc.querySelector(`input[name="dsh-light-mode"][value="${mode}"]`);
+      assert.ok(button, `mode control exists: ${mode}`);
+      button.click();
+      const control = doc.querySelector('#dsh-light-transparency');
+      for (const [value, opacity] of [['0', '1'], ['55', '0.45'], ['100', '0']]) {
+        control.value = value;
+        control.dispatchEvent(new window.Event('input', { bubbles: true }));
+        assert.ok(Math.abs(Number(doc.querySelector('.dsh-lamp-flow').style.opacity) - Number(opacity)) < 1e-12);
+        assert.ok(Math.abs(Number(doc.querySelector('.dsh-lamp-beam').style.opacity) - Number(opacity)) < 1e-12);
+        assert.equal(doc.querySelector('.dsh-light-ui').getAttribute('data-mode'), mode);
+        assert.equal(JSON.parse(window.localStorage.getItem('dsh-desk-light-v2')).transparency, Number(value));
+      }
+    }
+    const control = doc.querySelector('#dsh-light-transparency');
+    control.value = '35';
+    control.dispatchEvent(new window.Event('input', { bubbles: true }));
+    cleanup();
+    cleanup = loadClient(dom);
+    assert.equal(doc.querySelector('#dsh-light-transparency').value, '35');
+    assert.equal(doc.querySelector('.dsh-lamp-flow').style.opacity, '0.65');
+    assert.equal(doc.querySelector('.dsh-lamp-beam').style.opacity, '0.65');
   } finally {
     if (cleanup) cleanup();
     window.close();
