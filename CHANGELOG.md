@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.8
+
+### 修复
+
+- 修复浅色模式下 Remote 等弹窗面板透明、透出灰色遮罩的问题。仅在弹窗容器内恢复不透明纸色底，保留主界面壁纸透出效果；深色模式不应用此规则。
+- 保留 1.0.7 的原生调宽、自适应装饰和灯光透明度功能。
+
+### Fixed
+
+- Restore opaque paper surfaces inside light-mode dialogs, including the Remote workbench, instead of letting their dark scrims show through. Keep the app shell transparent for the wallpaper; the new rule does not apply in dark mode.
+- Retain the native width controls, adaptive decorations, and lamp transparency features from 1.0.7.
+
+### Verification
+
+- Automated source and unit tests, JavaScript syntax validation, and release-package content checks.
+- Added a source regression check for the light-mode dialog rule, paper token, and transparent shell. This does not replace browser computed-style verification; live visual verification was not independently repeated for this release.
+
 ## 1.0.7
 
 ### 修复

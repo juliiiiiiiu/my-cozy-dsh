@@ -8,13 +8,18 @@ Transform your DSH workspace into a cozy, illustrated room with warm colors, a g
 
 ## Installation
 
-- **DSH Market:** find **My Cozy DSH**, then install or check for updates. Version **1.0.7** includes both fixes below.
-- **Plugin manager:** add `my-cozy-dsh@1.0.7` from npm, or `github:juliiiiiiiu/my-cozy-dsh#v1.0.7` from GitHub.
-- **Manual download:** download `my-cozy-dsh-1.0.7.tgz` from the GitHub release, extract it, and add the extracted package directory as a local bundle.
+- **DSH Market:** find **My Cozy DSH**, then install or check for updates. Version **1.0.8** includes the dialog fix below.
+- **Plugin manager:** add `my-cozy-dsh@1.0.8` from npm, or `github:juliiiiiiiu/my-cozy-dsh#v1.0.8` from GitHub.
+- **Manual download:** download `my-cozy-dsh-1.0.8.tgz` from the GitHub release, extract it, and add the extracted package directory as a local bundle.
 
 Restart DeepSeek Harness after replacing an installed version if the new controls do not appear. Market catalog labels and npm mirrors may take time to refresh.
 
-## What's new in 1.0.7
+## What's new in 1.0.8
+
+- **Opaque dialogs in light mode:** Remote and other matching dialogs use the paper surface instead of showing their dark backdrop through the panel. The app shell still lets the wallpaper show through, and the new rule does not apply in dark mode.
+- Includes all features and fixes from 1.0.7 below. See [CHANGELOG.md](CHANGELOG.md) for verification details.
+
+## Retained from 1.0.7
 
 - **Resizable conversation:** both native width handles work again. Messages and the composer resize together, and Harness remembers the selected width. The theme no longer forces a separate width or first-drag baseline.
 - **Adaptive decorations:** the dog, chair, rug, cabinet, and fishbowl follow the composer and scale with available space. The left group hides below 90px of spare space; the right group hides below 80px. Each group returns when space is available again.

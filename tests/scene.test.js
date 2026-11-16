@@ -31,9 +31,12 @@ function loadClient(dom) {
   return () => cleanup();
 }
 
-test('version is 1.0.7 and vine copy matches the locale files', () => {
+test('version is 1.0.8 and vine copy matches the locale files', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.version, '1.0.7');
+  const lock = JSON.parse(read('package-lock.json'));
+  assert.equal(pkg.version, '1.0.8');
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[''].version, pkg.version);
   const en = JSON.parse(read('locale/en.json'));
   const zh = JSON.parse(read('locale/zh.json'));
   const src = read('client.js');
@@ -45,6 +48,21 @@ test('version is 1.0.7 and vine copy matches the locale files', () => {
   assert.doesNotMatch(src, /dsh-desk-light-v3/);
   assert.match(src, /dsh-lamp-flow/);
   assert.match(src, /data-pool=\\"desk\\"/);
+});
+
+test('light-mode dialogs use opaque paper without changing the transparent shell', () => {
+  // Source regression only; this does not verify browser-computed backgrounds.
+  const match = read('client.js').match(/const CSS = ("(?:\\.|[^"\\])*");/);
+  assert.ok(match, 'client contains a literal theme stylesheet');
+  const css = JSON.parse(match[1]);
+  const rule = css.match(/body:not\(\[data-ds-dark-theme\]\) :is\(\[role="dialog"\], \.dshRemoteBackdrop\)\s*\{([^}]+)\}/);
+  assert.ok(rule, 'dialog and Remote backdrop overrides are restricted to light mode');
+  assert.equal(rule[1].trim(), '--dsw-alias-bg-base: var(--dsk-surface-paper, #f6edd0) !important;');
+  const adapter = css.match(/body:not\(\[data-ds-dark-theme\]\)\s*\{([^}]+)\}/);
+  assert.ok(adapter, 'light-mode shell token adapter exists');
+  assert.match(adapter[1], /--dsw-alias-bg-base:\s*transparent !important;/);
+  assert.match(adapter[1], /--dsw-alias-bg-overlay:\s*#f6edd0 !important;/);
+  assert.match(css, /:root\s*\{[^}]*--dsk-surface-paper:\s*#f6edd0;/);
 });
 
 test('chat width and first-drag baseline stay owned by native controls', () => {
