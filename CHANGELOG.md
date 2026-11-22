@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9
+
+- 新增爱心橘猫点星便签。首次使用主题满 48 小时后，便签会在会话中自动出现，无需点击猫咪；输入或打开对话框时暂缓。
+- 点星和关闭状态只保存在当前设备，不跳转，也不提交到 GitHub。
+- Added a dismissible orange-tabby star note that opens automatically in conversation after 48 hours. Stars are saved only on the current device; no GitHub action is taken.
+
 ## 1.0.8
 
 ### 修复

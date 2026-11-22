@@ -13,5 +13,13 @@
   "vine": {
     "hide": "Hide hanging plant",
     "show": "Show hanging plant"
+  },
+  "starInvite": {
+    "title": "Like this theme?",
+    "copy": "Give it a star if you do.",
+    "add": "Add a star",
+    "added": "Starred on this device",
+    "close": "Close star note",
+    "local": "Only saved on this device. This does not add a GitHub star."
   }
 }

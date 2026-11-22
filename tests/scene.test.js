@@ -31,10 +31,10 @@ function loadClient(dom) {
   return () => cleanup();
 }
 
-test('version is 1.0.8 and vine copy matches the locale files', () => {
+test('version is 1.0.9 and vine copy matches the locale files', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.0.8');
+  assert.equal(pkg.version, '1.0.9');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
   const en = JSON.parse(read('locale/en.json'));
@@ -245,5 +245,57 @@ test('hanging plant choice survives a remount', () => {
   } finally {
     if (cleanup) cleanup();
     window.close();
+  }
+});
+
+test('star invite waits 48 hours, appears automatically, and records only on this device', () => {
+  const dom = sceneDom('zh-CN');
+  const { window } = dom;
+  const key = 'my-cozy-dsh:star-invite:v1';
+  const start = 1_800_000_000_000;
+  const hours48 = 48 * 60 * 60 * 1000;
+  let now = start, tick, unmount;
+  window.Date.now = () => now;
+  window.setInterval = handler => { tick = handler; return 1; };
+  window.clearInterval = () => {};
+  window.document.body.innerHTML = `<div id="root"><div class="_frame_x"><div class="_centerCol_x"><div class="_mainPanel_x"><div data-conversation-content data-content-phase="hero"><div data-composer-card><textarea></textarea></div></div></div></div></div></div>`;
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.hasAttribute('data-composer-card')) return new window.DOMRect(300, 520, 500, 90);
+    return new window.DOMRect(0, 0, 1024, 768);
+  };
+  try {
+    unmount = loadClient(dom);
+    const note = () => window.document.querySelector('.dsh-local-star-preview');
+    assert.equal(JSON.parse(window.localStorage.getItem(key)).firstUse, start);
+    now += hours48 - 1;
+    tick();
+    assert.equal(note().hidden, true);
+    now += 1;
+    tick();
+    assert.equal(note().hidden, true, 'wait for the conversation to settle');
+    now += 2000;
+    tick();
+    assert.equal(note().hidden, false, 'opens without a cat click, including on the hero composer');
+    const input = window.document.querySelector('textarea');
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.equal(note().hidden, true);
+    assert.equal(JSON.parse(window.localStorage.getItem(key)).outcome, '', 'typing does not consume the invite');
+    now += 2000;
+    tick();
+    now += 2000;
+    tick();
+    assert.equal(note().hidden, false);
+    note().querySelector('.dsh-star-action').click();
+    assert.equal(note().querySelector('.dsh-star-label').textContent, '已在本机加星');
+    assert.equal(JSON.parse(window.localStorage.getItem(key)).outcome, 'starred');
+    unmount();
+    assert.equal(note(), null);
+    unmount = loadClient(dom);
+    now += 10000;
+    tick();
+    assert.equal(note().hidden, true, 'does not reappear after reload');
+  } finally {
+    if (unmount) unmount();
+    dom.window.close();
   }
 });
