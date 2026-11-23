@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.11
+
+- 加星优先使用现有 HTTPS 代理环境变量，否则在 macOS 读取已启用的手动 HTTPS 代理，并尊重 GitHub 的代理例外。不修改系统设置。
+- Use the existing HTTPS proxy environment or the eligible manual macOS HTTPS proxy for GitHub CLI. No proxy address is bundled.
+
+## 1.0.10
+
+- 点击「加一颗星」才尝试使用宿主上 GitHub CLI 的登录给 GitHub 仓库加星。未授权时，按钮原地变为「去 GitHub 加星」，再次点击才打开仓库；网络错误可重试。
+- Replace the local-only star with a GitHub-confirmed star, an explicit GitHub link when authorization is unavailable, and a retry on temporary failures.
+
 ## 1.0.9
 
 - 新增爱心橘猫点星便签。首次使用主题满 48 小时后，便签会在会话中自动出现，无需点击猫咪；输入或打开对话框时暂缓。

@@ -31,7 +31,7 @@ window.__ModuleLoader__.load({
    - 全局页面（[data-global-panel]）：桌搭隐藏，台灯按主面板居中（避开右上角按钮）；
      模态层（设置等）：整桌隐藏，保证按钮与内容不被压住。
    ============================================================================ */
-function mountScene(CSS, IMG, HOME_LOCALE) {
+function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
   if (document.getElementById('dsh-desk-root')) return null;
 
   var doc = document;
@@ -1484,8 +1484,7 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
     stickyBarEls = next;
   }
 
-  // The invite and star are device-local; no analytics or network writes.
-  var STAR_INVITE_LOCALE = {"en": {"title": "Like this theme?", "copy": "Give it a star if you do.", "add": "Add a star", "added": "Starred on this device", "close": "Close star note", "local": "Only saved on this device. This does not add a GitHub star."}, "zh": {"title": "喜欢这个主题吗？", "copy": "喜欢的话，给我加颗星吧。", "add": "加一颗星", "added": "已在本机加星", "close": "关闭点星便签", "local": "仅在此设备记录，不会给 GitHub 仓库加星。"}};
+  var STAR_INVITE_LOCALE = {"en": {"title": "Like this theme?", "copy": "Give it a star if you do.", "add": "Add a star", "added": "Starred on GitHub", "close": "Close star note", "pending": "Adding star…", "external": "Go to GitHub to star", "retry": "Retry adding star"}, "zh": {"title": "喜欢这个主题吗？", "copy": "喜欢的话，给我加颗星吧。", "add": "加一颗星", "added": "已在 GitHub 加星", "close": "关闭点星便签", "pending": "正在加星…", "external": "去 GitHub 加星", "retry": "重试加星"}};
   var language = (doc.documentElement.lang || window.navigator.language || 'en').toLowerCase();
   var starWords = STAR_INVITE_LOCALE[language.split(/[-_]/)[0]] || STAR_INVITE_LOCALE.en;
   var starAgeMs = 48 * 60 * 60 * 1000;
@@ -1496,7 +1495,7 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
     var savedStar = JSON.parse(window.localStorage.getItem(starStorageKey) || 'null');
     if (savedStar && Number.isFinite(savedStar.firstUse) && savedStar.firstUse > 0) {
       starState.firstUse = savedStar.firstUse;
-      if (savedStar.outcome === 'starred' || savedStar.outcome === 'dismissed') starState.outcome = savedStar.outcome;
+      if (savedStar.outcome === 'github-starred' || savedStar.outcome === 'dismissed') starState.outcome = savedStar.outcome;
     }
   } catch (_) { starStorageOK = false; }
   function saveStarState() {
@@ -1520,7 +1519,8 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
   starPreviewCopy.textContent = starWords.copy;
   var starPreviewButton = make('button', 'dsh-star-action');
   starPreviewButton.type = 'button';
-  starPreviewButton.title = starWords.local;
+  starPreviewButton.setAttribute('aria-live', 'polite');
+  var starActionState = 'ready';
   var starPreviewIcon = make('span', 'dsh-star-icon');
   starPreviewIcon.setAttribute('aria-hidden', 'true');
   starPreviewIcon.textContent = '☆';
@@ -1554,19 +1554,39 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
       if (target && target.getClientRects().length) target.focus({ preventScroll: true });
     }
   }
-  starPreviewClose.addEventListener('click', function () { if (!starState.outcome) finishStarInvite('dismissed'); dismissStarPreview(true); });
-  starPreviewButton.addEventListener('click', function () {
-    if (starState.outcome) return;
-    finishStarInvite('starred');
-    if (!starStorageOK) { dismissStarPreview(false); return; }
-    starPreviewIcon.textContent = '★';
-    starPreviewLabel.textContent = starWords.added;
+  function closeStarInvite() {
+    if (!starState.outcome) finishStarInvite('dismissed');
+    starActionState = 'closed';
+    dismissStarPreview(true);
+  }
+  starPreviewClose.addEventListener('click', closeStarInvite);
+  starPreviewButton.addEventListener('click', async function () {
+    if (starState.outcome || starActionState === 'pending') return;
+    if (starActionState === 'fallback') {
+      window.open('https://github.com/juliiiiiiiu/my-cozy-dsh', '_blank', 'noopener,noreferrer');
+      return;
+    }
+    starActionState = 'pending';
     starPreviewButton.setAttribute('aria-disabled', 'true');
+    starPreviewLabel.textContent = starWords.pending;
+    var result;
+    try { result = requestStar ? await requestStar() : 'fallback'; }
+    catch (_) { result = 'retry'; }
+    if (!starPreview.isConnected || starState.outcome) return;
+    if (result === 'starred') {
+      starActionState = 'confirmed';
+      finishStarInvite('github-starred');
+      starPreviewIcon.textContent = '★';
+      starPreviewLabel.textContent = starWords.added;
+      return;
+    }
+    starActionState = result === 'fallback' ? 'fallback' : 'ready';
+    starPreviewButton.removeAttribute('aria-disabled');
+    starPreviewLabel.textContent = starActionState === 'fallback' ? starWords.external : starWords.retry;
   });
   function starPreviewKeydown(event) {
     if (event.key === 'Escape' && !starPreview.hidden && !event.defaultPrevented) {
-      if (!starState.outcome) finishStarInvite('dismissed');
-      dismissStarPreview(true);
+      closeStarInvite();
     }
   }
   function starPreviewInput(event) {
@@ -1579,7 +1599,7 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
   doc.addEventListener('keydown', starPreviewKeydown);
   doc.addEventListener('input', starPreviewInput);
   function layoutStarPreview(global) {
-    if (!starStorageOK || (starState.outcome && starPreview.hidden)) return;
+    if (!starStorageOK || (starState.outcome && starPreview.hidden && starActionState !== 'confirmed')) return;
     var now = Date.now();
     var card = doc.querySelector('[data-composer-card]');
     var center = doc.querySelector('[data-dsh-col="center"]') || doc.documentElement;
@@ -1729,8 +1749,17 @@ function mountScene(CSS, IMG, HOME_LOCALE) {
 
     return {
       apply(ctx) {
-        const dispose = mountScene(CSS, IMG, HOME_LOCALE);
-        if (dispose) ctx.effect(() => dispose);
+        const controller = new AbortController();
+        const dispose = mountScene(CSS, IMG, HOME_LOCALE, async () => {
+          const response = await window.fetch('/api/my-cozy-dsh/star', {
+            method: 'POST', credentials: 'same-origin', signal: controller.signal,
+            headers: { 'x-my-cozy-dsh-action': 'star' },
+          });
+          if (response.status === 404 || response.status === 405) return 'fallback';
+          if (!response.ok) return 'retry';
+          return (await response.json()).result;
+        });
+        if (dispose) ctx.effect(() => () => { controller.abort(); dispose(); });
       },
     };
   },

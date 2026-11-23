@@ -18,8 +18,10 @@
     "title": "Like this theme?",
     "copy": "Give it a star if you do.",
     "add": "Add a star",
-    "added": "Starred on this device",
+    "added": "Starred on GitHub",
     "close": "Close star note",
-    "local": "Only saved on this device. This does not add a GitHub star."
+    "pending": "Adding star…",
+    "external": "Go to GitHub to star",
+    "retry": "Retry adding star"
   }
 }

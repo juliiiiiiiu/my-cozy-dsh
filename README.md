@@ -14,10 +14,14 @@ Transform your DSH workspace into a cozy, illustrated room with warm colors, a g
 
 Restart DeepSeek Harness after replacing an installed version if the new controls do not appear. Market catalog labels and npm mirrors may take time to refresh.
 
-## What's new in 1.0.9
+## What's new in 1.0.11
+
+- GitHub CLI uses an explicit `HTTPS_PROXY` if set, or the enabled manual macOS HTTPS proxy when GitHub is not excluded. Automatic proxy scripts and discovery are not evaluated. The theme does not change system settings.
+
+## Retained from 1.0.10
 
 - **Orange-tabby star note:** the note appears automatically when you return to a conversation at least 48 hours after first using the theme. It waits while you're typing or a dialog is open. You can close it with × or Escape.
-- The star is stored only on this device. It does not open GitHub or change the repository's star count.
+- **Real GitHub stars:** Clicking **Add a star** uses the GitHub CLI login on the DSH host, if it is available and authorized to star the repository. GitHub must confirm the star before the note reports success. If no usable authorization is available, the same button becomes **Go to GitHub to star**; a second click opens the repository. Network errors offer a retry.
 
 ## Retained from 1.0.8
 

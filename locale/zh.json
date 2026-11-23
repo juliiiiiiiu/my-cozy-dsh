@@ -19,8 +19,10 @@
     "title": "喜欢这个主题吗？",
     "copy": "喜欢的话，给我加颗星吧。",
     "add": "加一颗星",
-    "added": "已在本机加星",
+    "added": "已在 GitHub 加星",
     "close": "关闭点星便签",
-    "local": "仅在此设备记录，不会给 GitHub 仓库加星。"
+    "pending": "正在加星…",
+    "external": "去 GitHub 加星",
+    "retry": "重试加星"
   }
 }
