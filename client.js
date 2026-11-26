@@ -1484,25 +1484,35 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
     stickyBarEls = next;
   }
 
-  var STAR_INVITE_LOCALE = {"en": {"title": "Like this theme?", "copy": "Give it a star if you do.", "add": "Add a star", "added": "Starred on GitHub", "close": "Close star note", "pending": "Adding star…", "external": "Go to GitHub to star", "retry": "Retry adding star"}, "zh": {"title": "喜欢这个主题吗？", "copy": "喜欢的话，给我加颗星吧。", "add": "加一颗星", "added": "已在 GitHub 加星", "close": "关闭点星便签", "pending": "正在加星…", "external": "去 GitHub 加星", "retry": "重试加星"}};
+  var STAR_INVITE_LOCALE = {"en": {"title": "Like this theme?", "copy": "Give it a star if you do.", "add": "Add a star", "added": "Starred on GitHub", "close": "Close star note", "pending": "Adding star…", "external": "Go to GitHub to star"}, "zh": {"title": "喜欢这个主题吗？", "copy": "喜欢的话，给我加颗星吧。", "add": "加一颗星", "added": "已在 GitHub 加星", "close": "关闭点星便签", "pending": "正在加星…", "external": "去 GitHub 加星"}};
   var language = (doc.documentElement.lang || window.navigator.language || 'en').toLowerCase();
   var starWords = STAR_INVITE_LOCALE[language.split(/[-_]/)[0]] || STAR_INVITE_LOCALE.en;
-  var starAgeMs = 48 * 60 * 60 * 1000;
-  var starStorageKey = 'my-cozy-dsh:star-invite:v1';
-  var starState = { firstUse: 0, outcome: '' };
+  var starReminderMs = 7 * 24 * 60 * 60 * 1000;
+  var starStorageKey = 'my-cozy-dsh:star-invite:v2';
+  var starState = { starred: false, dismissals: 0, firstDismissedAt: null };
   var starStorageOK = true;
   try {
-    var savedStar = JSON.parse(window.localStorage.getItem(starStorageKey) || 'null');
-    if (savedStar && Number.isFinite(savedStar.firstUse) && savedStar.firstUse > 0) {
-      starState.firstUse = savedStar.firstUse;
-      if (savedStar.outcome === 'github-starred' || savedStar.outcome === 'dismissed') starState.outcome = savedStar.outcome;
-    }
+    var rawStar = window.localStorage.getItem(starStorageKey);
+    try {
+      var savedStar = JSON.parse(rawStar);
+      if (savedStar) {
+        starState.starred = savedStar.starred === true;
+        if (savedStar.dismissals === 2) starState.dismissals = 2;
+        if (Number.isFinite(savedStar.firstDismissedAt)) {
+          starState.firstDismissedAt = savedStar.firstDismissedAt;
+          if (savedStar.dismissals === 1) starState.dismissals = 1;
+        }
+      }
+    } catch (_) { /* Ignore malformed invite state. */ }
   } catch (_) { starStorageOK = false; }
   function saveStarState() {
     try { window.localStorage.setItem(starStorageKey, JSON.stringify(starState)); }
     catch (_) { starStorageOK = false; }
   }
-  function finishStarInvite(outcome) { starState.outcome = outcome; saveStarState(); }
+  function canInviteToStar(now) {
+    return !starState.starred && (starState.dismissals === 0 ||
+      (starState.dismissals === 1 && now - starState.firstDismissedAt >= starReminderMs));
+  }
   var starPreviewTypedAt = 0;
   var starPreviewReadyAt = 0;
   var starPreview = make('aside', 'dsh-local-star-preview');
@@ -1555,13 +1565,19 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
     }
   }
   function closeStarInvite() {
-    if (!starState.outcome) finishStarInvite('dismissed');
+    if (starPreview.hidden) return;
+    if (!starState.starred) {
+      if (starState.dismissals === 0) starState.firstDismissedAt = Date.now();
+      starState.dismissals = Math.min(2, starState.dismissals + 1);
+      saveStarState();
+    }
     starActionState = 'closed';
+    starPreviewReadyAt = 0;
     dismissStarPreview(true);
   }
   starPreviewClose.addEventListener('click', closeStarInvite);
   starPreviewButton.addEventListener('click', async function () {
-    if (starState.outcome || starActionState === 'pending') return;
+    if (starPreview.hidden || starState.starred || starActionState === 'pending') return;
     if (starActionState === 'fallback') {
       window.open('https://github.com/juliiiiiiiu/my-cozy-dsh', '_blank', 'noopener,noreferrer');
       return;
@@ -1571,18 +1587,21 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
     starPreviewLabel.textContent = starWords.pending;
     var result;
     try { result = requestStar ? await requestStar() : 'fallback'; }
-    catch (_) { result = 'retry'; }
-    if (!starPreview.isConnected || starState.outcome) return;
+    catch (_) { result = 'fallback'; }
+    if (!starPreview.isConnected) return;
     if (result === 'starred') {
+      // A confirmed GitHub response still counts if the user closed the note while waiting.
+      starState.starred = true;
+      saveStarState();
+      if (starActionState !== 'pending') return;
       starActionState = 'confirmed';
-      finishStarInvite('github-starred');
       starPreviewIcon.textContent = '★';
       starPreviewLabel.textContent = starWords.added;
-      return;
+    } else if (starActionState === 'pending') {
+      starActionState = 'fallback';
+      starPreviewButton.removeAttribute('aria-disabled');
+      starPreviewLabel.textContent = starWords.external;
     }
-    starActionState = result === 'fallback' ? 'fallback' : 'ready';
-    starPreviewButton.removeAttribute('aria-disabled');
-    starPreviewLabel.textContent = starActionState === 'fallback' ? starWords.external : starWords.retry;
   });
   function starPreviewKeydown(event) {
     if (event.key === 'Escape' && !starPreview.hidden && !event.defaultPrevented) {
@@ -1599,18 +1618,14 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
   doc.addEventListener('keydown', starPreviewKeydown);
   doc.addEventListener('input', starPreviewInput);
   function layoutStarPreview(global) {
-    if (!starStorageOK || (starState.outcome && starPreview.hidden && starActionState !== 'confirmed')) return;
     var now = Date.now();
+    if (starActionState !== 'confirmed' && (!starStorageOK || !canInviteToStar(now))) return;
     var card = doc.querySelector('[data-composer-card]');
     var center = doc.querySelector('[data-dsh-col="center"]') || doc.documentElement;
     var blocked = global || doc.hidden || !card || now - starPreviewTypedAt < 2000 ||
       body.getAttribute('data-dsh-modal') === '1' || !!doc.querySelector('[role="dialog"][aria-modal="true"]:not([hidden])');
     if (blocked) { starPreviewReadyAt = 0; dismissStarPreview(false); return; }
     var c = center.getBoundingClientRect(), r = card.getBoundingClientRect();
-    if (r.width && r.height && (!starState.firstUse || now < starState.firstUse)) {
-      starState.firstUse = now; saveStarState();
-    }
-    if (!starStorageOK || now - starState.firstUse < starAgeMs) return;
     var leftBound = Math.max(8, c.left + 8), rightBound = Math.min(window.innerWidth - 8, c.right - 8);
     var minTop = Math.max(8, c.top + 50);
     var x = r.right - 36, y = r.top;
@@ -1627,6 +1642,11 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
     }
     if (!starPreviewReadyAt) starPreviewReadyAt = now + 2000;
     if (starPreview.hidden && now < starPreviewReadyAt) return;
+    if (starActionState === 'closed') {
+      starActionState = 'ready';
+      starPreviewButton.removeAttribute('aria-disabled');
+      starPreviewLabel.textContent = starWords.add;
+    }
     var left = Math.min(rightBound - 190, Math.max(leftBound, x - 112));
     starPreview.style.left = Math.round(left) + 'px';
     starPreview.style.bottom = Math.round(window.innerHeight - y + 10) + 'px';
@@ -1749,17 +1769,24 @@ function mountScene(CSS, IMG, HOME_LOCALE, requestStar) {
 
     return {
       apply(ctx) {
-        const controller = new AbortController();
+        let activeStarRequest;
         const dispose = mountScene(CSS, IMG, HOME_LOCALE, async () => {
-          const response = await window.fetch('/api/my-cozy-dsh/star', {
-            method: 'POST', credentials: 'same-origin', signal: controller.signal,
-            headers: { 'x-my-cozy-dsh-action': 'star' },
-          });
-          if (response.status === 404 || response.status === 405) return 'fallback';
-          if (!response.ok) return 'retry';
-          return (await response.json()).result;
+          const controller = new AbortController();
+          activeStarRequest = controller;
+          // Leave time for proxy discovery plus the host's 12-second GitHub CLI timeout.
+          const timeout = window.setTimeout(() => controller.abort(), 16000);
+          try {
+            const response = await window.fetch('/api/my-cozy-dsh/star', {
+              method: 'POST', credentials: 'same-origin', signal: controller.signal,
+              headers: { 'x-my-cozy-dsh-action': 'star' },
+            });
+            return response.ok && (await response.json()).result === 'starred' ? 'starred' : 'fallback';
+          } finally {
+            window.clearTimeout(timeout);
+            if (activeStarRequest === controller) activeStarRequest = undefined;
+          }
         });
-        if (dispose) ctx.effect(() => () => { controller.abort(); dispose(); });
+        if (dispose) ctx.effect(() => () => { activeStarRequest?.abort(); dispose(); });
       },
     };
   },

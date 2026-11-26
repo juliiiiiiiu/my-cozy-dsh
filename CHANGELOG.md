@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.12
+
+- 安装或更新后，首次打开并满足展示条件就出现加星便签，不再等 48 小时；旧版的关闭记录不再生效。
+- 一键加星失败或超时（包括未安装或未登录 GitHub CLI）时，主按钮改为「去 GitHub 加星」。仅打开链接不算加星。
+- 第一次关闭后七天再提醒一次；第二次关闭或一键加星成功后不再提醒。
+- The star note appears once the conversation settles after installing or updating, without a 48-hour delay. Previous dismissals no longer apply.
+- If one-click starring fails or times out, including when GitHub CLI is missing or signed out, the main button links to GitHub. Opening the link does not count as starring.
+- The note returns once seven days after the first dismissal. A second dismissal or a confirmed star stops future reminders.
+
 ## 1.0.11
 
 - 加星优先使用现有 HTTPS 代理环境变量，否则在 macOS 读取已启用的手动 HTTPS 代理，并尊重 GitHub 的代理例外。不修改系统设置。

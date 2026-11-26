@@ -21,7 +21,6 @@
     "added": "Starred on GitHub",
     "close": "Close star note",
     "pending": "Adding star…",
-    "external": "Go to GitHub to star",
-    "retry": "Retry adding star"
+    "external": "Go to GitHub to star"
   }
 }

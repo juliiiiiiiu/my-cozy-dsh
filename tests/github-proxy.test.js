@@ -37,7 +37,7 @@ test('applies the macOS proxy only to gh and preserves explicit network configur
   const run = (_file, _args, options, done) => { forwarded = options.env; done(null, 'HTTP/2.0 204 No Content\r\n', ''); };
   const readProxy = async () => { reads++; return 'http://proxy.example:5081'; };
   const env = { PATH: '/bin', NO_PROXY: '.example.org' };
-  assert.equal(await starTheme(run, env, undefined, { platform: 'darwin', readProxy }), 'starred');
+  assert.deepEqual(await starTheme(run, env, undefined, { platform: 'darwin', readProxy }), { result: 'starred' });
   assert.equal(forwarded.HTTPS_PROXY, 'http://proxy.example:5081');
   assert.equal(forwarded.NO_PROXY, '.example.org');
   assert.equal(env.HTTPS_PROXY, undefined);

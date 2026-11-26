@@ -28,7 +28,7 @@ function loadClient(dom, requestStar) {
     assert.equal(options.method, 'POST');
     assert.equal(options.credentials, 'same-origin');
     assert.equal(options.headers['x-my-cozy-dsh-action'], 'star');
-    return { ok: true, json: async () => ({ result: await requestStar() }) };
+    return requestStar(options);
   };
   window.__ModuleLoader__ = { load(def) { plugin = def; } };
   vm.runInContext(read('client.js'), dom.getInternalVMContext());
@@ -38,10 +38,10 @@ function loadClient(dom, requestStar) {
   return () => cleanup();
 }
 
-test('version is 1.0.11 and vine copy matches the locale files', () => {
+test('version is 1.0.12 and vine and star copy match the locale files', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.0.11');
+  assert.equal(pkg.version, '1.0.12');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
   const en = JSON.parse(read('locale/en.json'));
@@ -50,6 +50,9 @@ test('version is 1.0.11 and vine copy matches the locale files', () => {
   const vine = JSON.parse(src.match(/const VINE_LOCALE = (\{.*?\});/)[1]);
   assert.deepEqual(vine.en, en.vine);
   assert.deepEqual(vine.zh, zh.vine);
+  const star = JSON.parse(src.match(/var STAR_INVITE_LOCALE = (\{.*?\});/)[1]);
+  assert.deepEqual(star.en, en.starInvite);
+  assert.deepEqual(star.zh, zh.starInvite);
   assert.match(src, /dsh-cozy-hanging-plant/);
   assert.match(src, /dsh-desk-light-v2/);
   assert.doesNotMatch(src, /dsh-desk-light-v3/);
@@ -255,115 +258,220 @@ test('hanging plant choice survives a remount', () => {
   }
 });
 
-test('star invite waits 48 hours and only reports GitHub-confirmed success', async () => {
-  const dom = sceneDom('zh-CN');
+const starV1 = 'my-cozy-dsh:star-invite:v1';
+const starV2 = 'my-cozy-dsh:star-invite:v2';
+const repositoryUrl = 'https://github.com/juliiiiiiiu/my-cozy-dsh';
+const hour = 3600000;
+const week = 7 * 24 * hour;
+const settleStar = () => new Promise(resolve => setImmediate(resolve));
+const starResponse = result => ({ ok: true, json: async () => ({ result }) });
+
+function starFixture(t, lang = 'zh-CN') {
+  const dom = sceneDom(lang);
   const { window } = dom;
-  const key = 'my-cozy-dsh:star-invite:v1';
-  const start = 1_800_000_000_000;
-  const hours48 = 48 * 60 * 60 * 1000;
-  let now = start, tick, unmount;
+  const doc = window.document;
+  let now = 1_800_000_000_000, tick, unmount, cardTop = 520;
   window.Date.now = () => now;
   window.setInterval = handler => { tick = handler; return 1; };
   window.clearInterval = () => {};
-  window.document.body.innerHTML = `<div id="root"><div class="_frame_x"><div class="_centerCol_x"><div class="_mainPanel_x"><div data-conversation-content data-content-phase="hero"><div data-composer-card><textarea></textarea></div></div></div></div></div></div>`;
+  doc.body.innerHTML = `<div id="root"><div class="_frame_x"><div class="_centerCol_x"><div class="_mainPanel_x"><div data-conversation-content data-content-phase="hero"><div data-composer-card><textarea></textarea></div></div></div></div></div></div>`;
   window.HTMLElement.prototype.getBoundingClientRect = function () {
-    if (this.hasAttribute('data-composer-card')) return new window.DOMRect(300, 520, 500, 90);
+    if (this.hasAttribute('data-composer-card')) return new window.DOMRect(300, cardTop, 500, 90);
     return new window.DOMRect(0, 0, 1024, 768);
   };
-  try {
-    let calls = 0, confirm;
-    unmount = loadClient(dom, () => { calls++; return new Promise(resolve => { confirm = resolve; }); });
-    const note = () => window.document.querySelector('.dsh-local-star-preview');
-    assert.equal(JSON.parse(window.localStorage.getItem(key)).firstUse, start);
-    now += hours48 - 1;
-    tick();
-    assert.equal(note().hidden, true);
-    now += 1;
-    tick();
-    assert.equal(note().hidden, true, 'wait for the conversation to settle');
-    now += 2000;
-    tick();
-    assert.equal(note().hidden, false, 'opens without a cat click, including on the hero composer');
-    const input = window.document.querySelector('textarea');
-    input.dispatchEvent(new window.Event('input', { bubbles: true }));
-    assert.equal(note().hidden, true);
-    assert.equal(JSON.parse(window.localStorage.getItem(key)).outcome, '', 'typing does not consume the invite');
-    now += 2000;
-    tick();
-    now += 2000;
-    tick();
-    assert.equal(note().hidden, false);
-    assert.equal(calls, 0, 'no authorization check before clicking');
-    note().querySelector('.dsh-star-action').click();
-    note().querySelector('.dsh-star-action').click();
-    await settleStar();
-    assert.equal(calls, 1, 'pending repeated clicks cannot duplicate the request');
-    input.dispatchEvent(new window.Event('input', { bubbles: true }));
-    confirm('starred');
-    await settleStar();
-    assert.equal(note().hidden, true, 'confirmation does not interrupt typing');
-    now += 2000;
-    tick();
-    now += 2000;
-    tick();
-    assert.equal(note().hidden, false, 'confirmation returns after typing stops');
-    assert.equal(note().querySelector('.dsh-star-label').textContent, '已在 GitHub 加星');
-    note().querySelector('.dsh-star-close').click();
-    now += 2000;
-    tick();
-    assert.equal(note().hidden, true, 'explicitly closing the confirmation keeps it closed');
-    assert.equal(JSON.parse(window.localStorage.getItem(key)).outcome, 'github-starred');
-    unmount();
-    assert.equal(note(), null);
-    unmount = loadClient(dom);
-    now += 10000;
-    tick();
-    assert.equal(note().hidden, true, 'does not reappear after reload');
-  } finally {
-    if (unmount) unmount();
-    dom.window.close();
-  }
+  const note = () => doc.querySelector('.dsh-local-star-preview');
+  const button = () => note().querySelector('.dsh-star-action');
+  t.after(() => { if (unmount) unmount(); window.close(); });
+  return {
+    window, doc, note, button,
+    label: () => note().querySelector('.dsh-star-label').textContent,
+    close: () => note().querySelector('.dsh-star-close').click(),
+    type: () => doc.querySelector('textarea').dispatchEvent(new window.Event('input', { bubbles: true })),
+    state: () => JSON.parse(window.localStorage.getItem(starV2)),
+    mount: request => { if (unmount) unmount(); unmount = loadClient(dom, request); },
+    advance: ms => { now += ms; tick(); },
+    time: () => now,
+    setCardTop: top => { cardTop = top; },
+  };
+}
+
+test('first invite appears after two seconds of stability, with no first-use timestamp', t => {
+  const s = starFixture(t);
+  s.mount();
+  assert.equal(s.state(), null);
+  assert.equal(s.note().hidden, true);
+  s.advance(1999);
+  assert.equal(s.note().hidden, true);
+  s.advance(1);
+  assert.equal(s.note().hidden, false, 'opens immediately after settling, even on the hero composer');
+  assert.equal(s.label(), '加一颗星');
+  assert.equal(s.state(), null, 'showing the invite does not start a first-use countdown');
 });
 
-const settleStar = () => new Promise(resolve => setImmediate(resolve));
+for (const outcome of ['dismissed', 'starred', 'github-starred']) {
+  test(`v1 outcome ${outcome} and a 47-hour-old first-use timestamp are ignored`, t => {
+    const s = starFixture(t);
+    const saved = JSON.stringify({ firstUse: s.time() - 47 * hour, outcome });
+    s.window.localStorage.setItem(starV1, saved);
+    s.mount();
+    s.advance(2000);
+    assert.equal(s.note().hidden, false);
+    assert.equal(s.state(), null);
+    assert.equal(s.window.localStorage.getItem(starV1), saved);
+  });
+}
 
-test('a legacy local star does not hide the invite; fallback opens GitHub only on the second click', async () => {
-  const dom = sceneDom('zh-CN');
-  const { window } = dom;
-  const key = 'my-cozy-dsh:star-invite:v1';
-  let now = 1_800_000_000_000, tick, unmount, calls = 0;
-  const opens = [];
-  window.open = (...args) => opens.push(args);
-  window.Date.now = () => now;
-  window.setInterval = handler => { tick = handler; return 1; };
-  window.clearInterval = () => {};
-  window.localStorage.setItem(key, JSON.stringify({ firstUse: now - 49 * 3600000, outcome: 'starred' }));
-  window.document.body.innerHTML = `<div id="root"><div class="_frame_x"><div class="_centerCol_x"><div class="_mainPanel_x"><div data-conversation-content data-content-phase="hero"><div data-composer-card></div></div></div></div></div></div>`;
-  window.HTMLElement.prototype.getBoundingClientRect = function () {
-    if (this.hasAttribute('data-composer-card')) return new window.DOMRect(300, 520, 500, 90);
-    return new window.DOMRect(0, 0, 1024, 768);
-  };
-  try {
-    unmount = loadClient(dom, async () => ++calls === 1 ? 'retry' : 'fallback');
-    now += 2000;
-    tick();
-    const button = window.document.querySelector('.dsh-star-action');
-    const label = () => button.querySelector('.dsh-star-label').textContent;
-    assert.equal(button.closest('aside').hidden, false);
-    assert.equal(label(), '加一颗星');
-    button.click();
+test('first dismissal hides immediately and returns after seven days; second survives remount permanently', t => {
+  const s = starFixture(t);
+  s.mount();
+  s.advance(2000);
+  const firstDismissedAt = s.time();
+  s.close();
+  s.close();
+  assert.equal(s.note().hidden, true);
+  assert.deepEqual(s.state(), { starred: false, dismissals: 1, firstDismissedAt });
+  s.advance(week - hour);
+  s.mount();
+  s.advance(2000);
+  assert.equal(s.note().hidden, true, 'still hidden at 6 days, 23 hours');
+  assert.equal(s.state().firstDismissedAt, firstDismissedAt);
+  s.advance(2 * hour - 2000);
+  s.advance(2000);
+  assert.equal(s.note().hidden, false, 'returns by 7 days, 1 hour plus settling');
+  assert.equal(s.label(), '加一颗星');
+  s.doc.dispatchEvent(new s.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(s.note().hidden, true);
+  assert.deepEqual(s.state(), { starred: false, dismissals: 2, firstDismissedAt });
+  s.advance(2 * week);
+  s.mount();
+  s.advance(3000);
+  assert.equal(s.note().hidden, true);
+});
+
+test('dialog, global panel, low composer space and typing defer without consuming the invite', t => {
+  const s = starFixture(t);
+  s.setCardTop(180);
+  s.mount();
+  s.advance(5000);
+  assert.equal(s.note().hidden, true);
+  s.setCardTop(520);
+  const dialog = s.doc.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  s.doc.body.append(dialog);
+  s.advance(5000);
+  assert.equal(s.note().hidden, true);
+  dialog.remove();
+  const globalPanel = s.doc.createElement('div');
+  globalPanel.setAttribute('data-global-panel', '');
+  s.doc.querySelector('._mainPanel_x').append(globalPanel);
+  s.advance(5000);
+  assert.equal(s.note().hidden, true);
+  globalPanel.remove();
+  s.advance(0);
+  s.advance(2000);
+  assert.equal(s.note().hidden, false);
+  s.type();
+  assert.equal(s.note().hidden, true);
+  s.advance(1999);
+  assert.equal(s.note().hidden, true);
+  s.advance(1);
+  s.advance(2000);
+  assert.equal(s.note().hidden, false);
+  assert.equal(s.state(), null);
+});
+
+test('only GitHub-confirmed success writes starred and confirmation waits while typing', async t => {
+  const s = starFixture(t);
+  let calls = 0, confirm;
+  s.mount(() => { calls++; return new Promise(resolve => { confirm = resolve; }); });
+  s.advance(2000);
+  assert.equal(calls, 0, 'does not check authorization before clicking');
+  s.button().click();
+  s.button().click();
+  assert.equal(calls, 1, 'pending repeated clicks cannot duplicate the request');
+  s.type();
+  confirm(starResponse('starred'));
+  await settleStar();
+  assert.equal(s.note().hidden, true, 'confirmation does not interrupt typing');
+  s.advance(2000);
+  s.advance(2000);
+  assert.equal(s.note().hidden, false, 'confirmation returns after typing stops');
+  assert.equal(s.label(), '已在 GitHub 加星');
+  s.close();
+  s.advance(2000);
+  assert.equal(s.note().hidden, true);
+  assert.equal(s.state().starred, true);
+  assert.equal(s.state().dismissals, 0);
+  s.mount();
+  s.advance(2 * week);
+  assert.equal(s.note().hidden, true);
+});
+
+test('a verified star still stops reminders if the user closes while the request is pending', async t => {
+  const s = starFixture(t);
+  let confirm;
+  s.mount(() => new Promise(resolve => { confirm = resolve; }));
+  s.advance(2000);
+  s.button().click();
+  s.close();
+  confirm(starResponse('starred'));
+  await settleStar();
+  assert.equal(s.state().starred, true);
+  s.advance(2 * week);
+  s.advance(2000);
+  assert.equal(s.note().hidden, true);
+});
+
+for (const [failure, response] of [
+  ['missing gh or missing login', () => starResponse('fallback')],
+  ['non-2xx from the host', () => ({ ok: false, status: 503 })],
+  ['unreachable host', () => { throw new TypeError('Failed to fetch'); }],
+  ['invalid response body', () => ({ ok: true, json: async () => { throw new SyntaxError(); } })],
+]) {
+  test(`${failure} changes the main action to the fixed GitHub link`, async t => {
+    const s = starFixture(t);
+    let calls = 0;
+    const opens = [];
+    s.window.open = (...args) => opens.push(args);
+    s.mount(() => { calls++; return response(); });
+    s.advance(2000);
+    s.button().click();
     await settleStar();
-    assert.equal(label(), '重试加星');
-    button.click();
-    await settleStar();
-    assert.equal(label(), '去 GitHub 加星');
+    assert.equal(s.label(), '去 GitHub 加星');
+    assert.equal(s.button().hasAttribute('aria-disabled'), false);
     assert.equal(opens.length, 0);
-    button.click();
-    assert.equal(opens[0][0], 'https://github.com/juliiiiiiiu/my-cozy-dsh');
-    assert.equal(calls, 2);
-    assert.notEqual(JSON.parse(window.localStorage.getItem(key)).outcome, 'github-starred');
-  } finally {
-    if (unmount) unmount();
-    window.close();
-  }
+    s.button().click();
+    assert.deepEqual(opens, [[repositoryUrl, '_blank', 'noopener,noreferrer']]);
+    assert.equal(calls, 1);
+    assert.equal(s.state(), null, 'opening a link does not record a GitHub star');
+    s.close();
+    assert.equal(s.state().starred, false);
+    assert.equal(s.state().dismissals, 1);
+    s.advance(week);
+    s.advance(2000);
+    assert.equal(s.note().hidden, false);
+    assert.equal(s.label(), '加一颗星', 'the reminder offers one-click starring again');
+  });
+}
+
+test('client aborts a hung POST and immediately offers the GitHub link', async t => {
+  const s = starFixture(t, 'en');
+  const originalSetTimeout = s.window.setTimeout;
+  let fireDeadline;
+  s.window.setTimeout = (handler, ms, ...args) => {
+    if (ms === 16000) { fireDeadline = handler; return -1; }
+    return originalSetTimeout.call(s.window, handler, ms, ...args);
+  };
+  s.mount(({ signal }) => new Promise((resolve, reject) => {
+    signal.addEventListener('abort', () => reject(new Error('fetch aborted')), { once: true });
+  }));
+  s.advance(2000);
+  s.button().click();
+  assert.equal(s.label(), 'Adding star…');
+  assert.ok(fireDeadline);
+  fireDeadline();
+  await settleStar();
+  assert.equal(s.label(), 'Go to GitHub to star');
+  assert.equal(s.state(), null);
 });

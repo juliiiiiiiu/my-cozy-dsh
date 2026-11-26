@@ -9,19 +9,19 @@ Transform your DSH workspace into a cozy, illustrated room with warm colors, a g
 ## Installation
 
 - **DSH Market:** find **My Cozy DSH**, then install or check for updates.
-- **Plugin manager:** add `my-cozy-dsh@1.0.9` from npm, or `github:juliiiiiiiu/my-cozy-dsh#v1.0.9` from GitHub.
-- **Manual install:** download the tarball with `npm pack my-cozy-dsh@1.0.9`, extract it, and add the extracted package directory as a local bundle.
+- **Plugin manager:** add `my-cozy-dsh@1.0.12` from npm, or `github:juliiiiiiiu/my-cozy-dsh#v1.0.12` from GitHub.
+- **Manual install:** download the tarball with `npm pack my-cozy-dsh@1.0.12`, extract it, and add the extracted package directory as a local bundle.
 
 Restart DeepSeek Harness after replacing an installed version if the new controls do not appear. Market catalog labels and npm mirrors may take time to refresh.
 
-## What's new in 1.0.11
+## What's new in 1.0.12
+
+- **Orange-tabby star note:** after installing or updating, it appears as soon as the conversation settles and there is room above the composer. It waits while you're typing or a dialog is open. Earlier dismissals are reset. You can close it with × or Escape; it returns once after seven days, and a second dismissal hides it permanently.
+- **Real GitHub stars:** **Add a star** uses the GitHub CLI login on the DSH host. If it fails or times out, the button becomes **Go to GitHub to star** and opens the repository on click. Only a confirmed star stops further reminders; opening the link alone does not.
+
+## Retained from 1.0.11
 
 - GitHub CLI uses an explicit `HTTPS_PROXY` if set, or the enabled manual macOS HTTPS proxy when GitHub is not excluded. Automatic proxy scripts and discovery are not evaluated. The theme does not change system settings.
-
-## Retained from 1.0.10
-
-- **Orange-tabby star note:** the note appears automatically when you return to a conversation at least 48 hours after first using the theme. It waits while you're typing or a dialog is open. You can close it with × or Escape.
-- **Real GitHub stars:** Clicking **Add a star** uses the GitHub CLI login on the DSH host, if it is available and authorized to star the repository. GitHub must confirm the star before the note reports success. If no usable authorization is available, the same button becomes **Go to GitHub to star**; a second click opens the repository. Network errors offer a retry.
 
 ## Retained from 1.0.8
 
