@@ -86,7 +86,8 @@ test('chat width and first-drag baseline stay owned by native controls', () => {
   assert.doesNotMatch(source, /localStorage\.setItem\(['"]dsh\.conversation\.contentWidth/);
   assert.match(source, /var showLeft = leftRoom >= 90/);
   assert.match(source, /var showRight = rightRoom >= 80/);
-  assert.ok(source.includes("add(doc.querySelector('[data-composer-card]'))"));
+  assert.ok(source.includes('add(mainComposer())'));
+  assert.ok(source.includes('add(activeRightPanel)'));
   assert.ok(source.includes('ro.observe(next[j])'));
 });
 
@@ -474,4 +475,101 @@ test('client aborts a hung POST and immediately offers the GitHub link', async t
   await settleStar();
   assert.equal(s.label(), 'Go to GitHub to star');
   assert.equal(s.state(), null);
+});
+
+test('native right panel owns its stroke and does not clip fullscreen or floating content', () => {
+  const literal = read('client.js').match(/const CSS = ("(?:\\.|[^"\\])*");/)[1];
+  const css = JSON.parse(literal);
+  assert.match(css, /\[data-sidebar-right-panel="push"\]\[data-sidebar-right-open\]::after\s*\{[^}]*pointer-events:\s*none;[^}]*border:/);
+  assert.doesNotMatch(css, /\[data-dsh-col="rightbar"\]\s*\{/);
+  assert.doesNotMatch(css, /\[style\*="--dsh-sidebar-width"\]/);
+});
+
+test('pets follow the visible middle composer through push, resizing, fullscreen and returning to two columns', t => {
+  const dom = sceneDom('zh');
+  const { window } = dom;
+  const doc = window.document;
+  let tick;
+  Object.defineProperties(window, { innerWidth: { value: 1640 }, innerHeight: { value: 900 } });
+  window.setInterval = handler => { tick = handler; return 1; };
+  window.clearInterval = () => {};
+  doc.body.innerHTML = `<div id="root"><div class="_frame_x">
+    <div class="_sidebarCol_x" id="sidebar"></div>
+    <div data-rightbar-col id="track">
+      <div data-sidebar-right-session="retained" hidden><div data-sidebar-right-panel="fullscreen" data-sidebar-right-open></div></div>
+      <div data-sidebar-right-panel="push" id="panel">
+        <div class="_mainPanel_other"><div data-composer-card id="inspector-card"></div></div>
+      </div>
+    </div>
+    <div class="_centerCol_x" id="center"><div class="_mainPanel_x" id="main">
+      <div data-conversation-content data-content-phase="hero" hidden><div data-composer-card id="hidden-card"></div></div>
+      <div data-conversation-content data-content-phase="active"><div data-composer-card id="chat-card"></div></div>
+    </div></div>
+  </div></div>`;
+  const el = id => doc.getElementById(id);
+  const panel = el('panel'), frame = doc.querySelector('._frame_x');
+  const rects = { sidebar: [16, 16, 240, 868], track: [1640, 0, 0, 884],
+    center: [264, 16, 1360, 868], 'chat-card': [430, 720, 730, 120],
+    'inspector-card': [1250, 720, 350, 120], 'hidden-card': [300, 630, 620, 100],
+    panel: [1200, 16, 424, 868], main: [264, 16, 1360, 868] };
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    return new window.DOMRect(...(rects[this.id] || [0, 0, 1640, 900]));
+  };
+  const unmount = loadClient(dom);
+  t.after(() => { unmount(); window.close(); });
+  const dog = doc.querySelector('.dsh-pets-westie');
+  const head = doc.querySelector('.dsh-cathead-btn');
+  doc.querySelector('.dsh-cat-btn').click();
+  assert.equal(doc.body.getAttribute('data-dsh-cat'), 'collapsed');
+  assert.equal(doc.body.getAttribute('data-dsh-rightpanel'), '0', 'hidden retained session is ignored');
+  assert.equal(dog.style.display, '', 'the dog is visible with enough space in two columns');
+  assert.equal(parseFloat(head.style.left), 1160 - 2 - 32);
+  assert.equal(el('main').hasAttribute('data-dsh-main'), true);
+  assert.equal(doc.querySelector('._mainPanel_other').hasAttribute('data-dsh-main'), false);
+
+  panel.setAttribute('data-sidebar-right-open', '');
+  rects.center = [264, 16, 920, 868];
+  rects['chat-card'] = [400, 700, 650, 140];
+  tick();
+  assert.equal(doc.body.getAttribute('data-dsh-rightpanel'), '1', 'live right panel wins over zero-width track');
+  assert.equal(dog.style.display, 'none', 'dog is tucked away in three columns');
+  assert.equal(parseFloat(head.style.left), 1050 - 2 - 32);
+  assert.equal(parseFloat(head.style.top) + 22, 702);
+  assert.equal(doc.querySelector('.dsh-frame-line[data-for="rightbar"]'), null, 'no mirrored right stroke');
+  assert.equal(window.getComputedStyle(doc.querySelector('.dsh-deco-shelf')).display, 'none');
+
+  frame.setAttribute('data-dragging', '');
+  rects.panel = [1060, 16, 564, 868];
+  rects['chat-card'] = [336, 680, 630, 160];
+  tick();
+  assert.equal(parseFloat(head.style.left), 966 - 2 - 32, 'new composer right edge is used during drag');
+  assert.equal(doc.querySelector('.dsh-pets').style.clipPath, 'inset(16px 580px 16px 264px)', 'clip to the live panel, not the grid track');
+  assert.equal(doc.querySelector('.dsh-frame-lines').style.display, 'none');
+  frame.removeAttribute('data-dragging');
+  let frameTime = 100;
+  window.performance.now = () => frameTime;
+  window.dispatchEvent(new window.Event('resize'));
+  assert.equal(doc.querySelector('.dsh-frame-lines').style.display, 'none', 'window resizing also suppresses stale mirrored strokes');
+  frameTime += 101;
+  tick();
+  assert.equal(doc.querySelector('.dsh-frame-lines').style.display, '');
+  rects['chat-card'] = [336, 680, 0, 0];
+  tick();
+  assert.equal(doc.body.getAttribute('data-dsh-pets'), '0', 'invalid composer never leaves stale artwork');
+  rects['chat-card'] = [336, 680, 630, 160];
+
+  panel.setAttribute('data-sidebar-right-panel', 'fullscreen');
+  tick();
+  assert.equal(doc.body.getAttribute('data-dsh-rightfullscreen'), '1', 'fullscreen marker is read ahead of frame state');
+  assert.equal(doc.body.getAttribute('data-dsh-pets'), '0');
+  panel.removeAttribute('data-sidebar-right-open');
+  panel.setAttribute('data-sidebar-right-panel', 'push');
+  rects.center = [264, 16, 1360, 868];
+  rects['chat-card'] = [430, 720, 730, 120];
+  tick();
+  assert.equal(doc.body.getAttribute('data-dsh-rightpanel'), '0');
+  assert.equal(doc.body.getAttribute('data-dsh-rightfullscreen'), '0');
+  assert.equal(doc.body.getAttribute('data-dsh-pets'), '1');
+  assert.equal(dog.style.display, '');
+  assert.equal(parseFloat(head.style.left), 1160 - 2 - 32);
 });

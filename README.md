@@ -9,8 +9,8 @@ Transform your DSH workspace into a cozy, illustrated room with warm colors, a g
 ## Installation
 
 - **DSH Market:** find **My Cozy DSH**, then install or check for updates.
-- **Plugin manager:** add `my-cozy-dsh@1.0.12` from npm, or `github:juliiiiiiiu/my-cozy-dsh#v1.0.12` from GitHub.
-- **Manual install:** download the tarball with `npm pack my-cozy-dsh@1.0.12`, extract it, and add the extracted package directory as a local bundle.
+- **Plugin manager:** add `github:juliiiiiiiu/my-cozy-dsh#v1.0.12`, or use `my-cozy-dsh@1.0.12` once the version is available on npm.
+- **Manual install:** download `my-cozy-dsh-1.0.12.tgz` from the [GitHub Release](https://github.com/juliiiiiiiu/my-cozy-dsh/releases/tag/v1.0.12), extract it, and add the extracted package directory as a local bundle.
 
 Restart DeepSeek Harness after replacing an installed version if the new controls do not appear. Market catalog labels and npm mirrors may take time to refresh.
 
@@ -18,6 +18,7 @@ Restart DeepSeek Harness after replacing an installed version if the new control
 
 - **Orange-tabby star note:** after installing or updating, it appears as soon as the conversation settles and there is room above the composer. It waits while you're typing or a dialog is open. Earlier dismissals are reset. You can close it with × or Escape; it returns once after seven days, and a second dismissal hides it permanently.
 - **Real GitHub stars:** **Add a star** uses the GitHub CLI login on the DSH host. If it fails or times out, the button becomes **Go to GitHub to star** and opens the repository on click. Only a confirmed star stops further reminders; opening the link alone does not.
+- **Three-column layout:** opening the inspector tucks away the dog and chair, keeps the cat head attached to the middle composer, and prevents duplicate inspector borders during resizing.
 
 ## Retained from 1.0.11
 

@@ -5,9 +5,11 @@
 - 安装或更新后，首次打开并满足展示条件就出现加星便签，不再等 48 小时；旧版的关闭记录不再生效。
 - 一键加星失败或超时（包括未安装或未登录 GitHub CLI）时，主按钮改为「去 GitHub 加星」。仅打开链接不算加星。
 - 第一次关闭后七天再提醒一次；第二次关闭或一键加星成功后不再提醒。
+- 修复三栏布局：打开右栏时收起小狗和椅子，小猫头贴着中栏输入框，右栏边框随面板移动，不再留下重复描边。
 - The star note appears once the conversation settles after installing or updating, without a 48-hour delay. Previous dismissals no longer apply.
 - If one-click starring fails or times out, including when GitHub CLI is missing or signed out, the main button links to GitHub. Opening the link does not count as starring.
 - The note returns once seven days after the first dismissal. A second dismissal or a confirmed star stops future reminders.
+- In three-column mode, the dog and chair tuck away, the cat head stays on the middle composer, and the inspector's border no longer leaves a duplicate stroke while resizing.
 
 ## 1.0.11
 
